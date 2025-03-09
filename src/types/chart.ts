@@ -1,14 +1,46 @@
 export interface ChartData {
   categoryData: string[];
-  values: number[][];
+  values: [number, number, number, number][];  // [open, close, low, high]
   volumes: number[];
+  itemStyle: {
+    color: string;
+    borderColor: string;
+    color0: string;
+    borderColor0: string;
+  };
 }
 
 export interface IndicatorSettings {
-  ma: boolean;
-  bb: boolean;
-  vwap: boolean;
-  volume: boolean;
+  sma: {
+    enabled: boolean;
+    period: number;
+    color: string;
+  };
+  ema: {
+    enabled: boolean;
+    period: number;
+    color: string;
+  };
+  wma: {
+    enabled: boolean;
+    period: number;
+    color: string;
+  };
+  bb: {
+    enabled: boolean;
+    period: number;
+    stdDev: number;
+    color: string;
+  };
+  vwap: {
+    enabled: boolean;
+    color: string;
+  };
+  volume: {
+    enabled: boolean;
+    upColor: string;
+    downColor: string;
+  };
 }
 
 export interface DrawingState {
@@ -34,6 +66,7 @@ export interface Timeframes {
 
 export interface Candle {
   time: number;
+  timestamp: string;
   open: number;
   high: number;
   low: number;

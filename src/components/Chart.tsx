@@ -31,174 +31,81 @@ export const Chart: React.FC<ChartProps> = ({
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<echarts.ECharts | null>(null);
 
+  // Initialize chart
   useEffect(() => {
-    if (chartRef.current) {
-      if (!chartInstance.current) {
-        chartInstance.current = echarts.init(chartRef.current, isDarkMode ? 'dark' : undefined, {
-          renderer: 'canvas'
-        });
-      }
-      
-      const handleResize = () => {
-        chartInstance.current?.resize();
-      };
+    if (!chartRef.current) return;
 
-      window.addEventListener('resize', handleResize);
+    const chart = echarts.init(chartRef.current, isDarkMode ? 'dark' : undefined);
+    chartInstance.current = chart;
 
-      return () => {
-        window.removeEventListener('resize', handleResize);
-        chartInstance.current?.dispose();
-      };
-    }
+    const handleResize = () => {
+      chart.resize();
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      chart.dispose();
+      chartInstance.current = null;
+    };
   }, [isDarkMode]);
 
+  // Update chart options
   useEffect(() => {
-    if (!chartInstance.current || !data.values.length) return;
+    if (!chartInstance.current || !data.values.length) {
+      console.log('No chart instance or data');
+      return;
+    }
 
-    const option: EChartsOption = {
-      backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff',
-      animation: false,
-      legend: {
-        bottom: 10,
-        left: 'center',
-        data: ['MA5', 'MA10', 'MA20', 'MA30', 'BB Upper', 'BB Lower', 'VWAP', 'Volume'],
-        textStyle: {
-          color: isDarkMode ? '#ffffff' : '#000000'
-        }
-      },
-      grid: [
-        {
-          left: '10%',
-          right: '8%',
-          height: '50%'
-        },
-        {
-          left: '10%',
-          right: '8%',
-          top: '63%',
-          height: '16%'
-        }
-      ],
-      xAxis: [
-        {
-          type: 'category' as const,
-          data: data.categoryData,
-          axisLabel: {
-            show: false
-          },
-          min: 'dataMin',
-          max: 'dataMax'
-        },
-        {
-          type: 'category' as const,
-          gridIndex: 1,
-          data: data.categoryData,
-          axisLabel: {
-            show: false
-          },
-          min: 'dataMin',
-          max: 'dataMax'
-        }
-      ],
-      yAxis: [
-        {
-          scale: true,
-          splitNumber: 5,
-          position: 'right' as const,
-          axisLine: {
-            lineStyle: {
-              color: isDarkMode ? '#ffffff' : '#000000'
-            }
-          },
-          splitLine: {
-            show: true
-          },
-          axisLabel: {
-            inside: true
-          },
-          axisTick: {
-            show: false
-          }
-        },
-        {
-          scale: true,
-          gridIndex: 1,
-          splitNumber: 2,
-          position: 'right' as const,
-          axisLine: {
-            lineStyle: {
-              color: isDarkMode ? '#ffffff' : '#000000'
-            }
-          },
-          axisLabel: {
-            inside: true
-          },
-          axisTick: {
-            show: false
-          },
-          splitLine: {
-            show: false
-          }
-        }
-      ],
-      dataZoom: [
-        {
-          type: 'inside',
-          xAxisIndex: [0, 1],
-          start: 0,
-          end: 100,
-          handleStyle: {
-            color: isDarkMode ? '#ffffff' : '#000000'
-          }
-        }
-      ],
-      series: [
-        {
-          name: 'Candlestick',
-          type: 'candlestick',
-          data: data.values,
+    console.log('Updating chart with data:', data.values.length, 'candles');
+
+    // Initialize series and legend data arrays
+    const series: SeriesOption[] = [];
+    const legendData: string[] = [];
+
+    // Add main candlestick series
+    series.push({
+      name: 'Candlestick',
+      type: 'candlestick',
+      data: data.values,
+      itemStyle: {
+        color0: '#ef5350',
+        color: '#26a69a',
+        borderColor0: '#ef5350',
+        borderColor: '#26a69a'
+      }
+    });
+    legendData.push('Candlestick');
+
+    // Add volume bars if enabled
+    if (settings.volume) {
+      const volumeSeries: SeriesOption = {
+        name: 'Volume',
+        type: 'bar',
+        xAxisIndex: 1,
+        yAxisIndex: 1,
+        data: data.volumes.map((volume, i) => ({
+          value: volume,
           itemStyle: {
-            color: '#ef5350',
-            color0: '#26a69a',
-            borderColor: '#ef5350',
-            borderColor0: '#26a69a'
-          },
-          emphasis: {
-            itemStyle: {
-              color: '#ef5350',
-              color0: '#26a69a',
-              borderColor: '#ef5350',
-              borderColor0: '#26a69a'
-            }
+            color: data.values[i][1] > data.values[i][0] ? '#ef5350' : '#26a69a'
           }
-        }
-      ] as SeriesOption[]
-    };
+        }))
+      };
+      series.push(volumeSeries);
+      legendData.push('Volume');
+    }
 
-    // Add volume bars
-    const volumeSeries: SeriesOption = {
-      name: 'Volume',
-      type: 'bar',
-      xAxisIndex: 1,
-      yAxisIndex: 1,
-      data: data.volumes.map((volume, i) => ({
-        value: volume,
-        itemStyle: {
-          color: data.values[i][1] > data.values[i][0] ? '#ef5350' : '#26a69a'
-        }
-      }))
-    };
-    (option.series as SeriesOption[]).push(volumeSeries);
-
-    // Add indicators if enabled
+    // Add MA indicators if enabled
     if (settings.ma) {
       const maData = calculateMA(data.values);
       const maColors = ['#7b1fa2', '#1e88e5', '#43a047', '#fb8c00'];
       const maPeriods = [5, 10, 20, 30];
 
       maPeriods.forEach((period, index) => {
+        const name = `MA${period}`;
         const maSeries: SeriesOption = {
-          name: `MA${period}`,
+          name,
           type: 'line',
           data: maData[index],
           smooth: true,
@@ -207,10 +114,12 @@ export const Chart: React.FC<ChartProps> = ({
             color: maColors[index]
           }
         };
-        (option.series as SeriesOption[]).push(maSeries);
+        series.push(maSeries);
+        legendData.push(name);
       });
     }
 
+    // Add Bollinger Bands if enabled
     if (settings.bb) {
       const bbData = calculateBollingerBands(data.values);
       const bbSeries: SeriesOption[] = [
@@ -235,9 +144,11 @@ export const Chart: React.FC<ChartProps> = ({
           }
         }
       ];
-      (option.series as SeriesOption[]).push(...bbSeries);
+      series.push(...bbSeries);
+      legendData.push('BB Upper', 'BB Lower');
     }
 
+    // Add VWAP if enabled
     if (settings.vwap) {
       const vwapData = calculateVWAP(data.values, data.volumes);
       const vwapSeries: SeriesOption = {
@@ -250,10 +161,165 @@ export const Chart: React.FC<ChartProps> = ({
           color: '#e91e63'
         }
       };
-      (option.series as SeriesOption[]).push(vwapSeries);
+      series.push(vwapSeries);
+      legendData.push('VWAP');
     }
 
-    chartInstance.current.setOption(option, true);
+    const option: EChartsOption = {
+      backgroundColor: isDarkMode ? '#131722' : '#ffffff',
+      animation: false,
+      legend: {
+        bottom: 10,
+        left: 'center',
+        data: legendData,
+        textStyle: {
+          color: isDarkMode ? '#ffffff' : '#000000'
+        }
+      },
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: {
+          type: 'cross'
+        },
+        backgroundColor: isDarkMode ? '#1e222d' : '#ffffff',
+        borderColor: isDarkMode ? '#2a2e39' : '#e0e0e0',
+        textStyle: {
+          color: isDarkMode ? '#ffffff' : '#000000'
+        }
+      },
+      axisPointer: {
+        link: [{ xAxisIndex: 'all' }],
+        label: {
+          backgroundColor: isDarkMode ? '#2a2e39' : '#e0e0e0'
+        }
+      },
+      grid: [
+        {
+          left: '3%',
+          right: '3%',
+          top: '8%',
+          height: '60%'
+        },
+        {
+          left: '3%',
+          right: '3%',
+          top: '75%',
+          height: '15%'
+        }
+      ],
+      xAxis: [
+        {
+          type: 'category',
+          data: data.categoryData,
+          boundaryGap: true,
+          axisLine: { 
+            lineStyle: { 
+              color: isDarkMode ? '#2a2e39' : '#e0e0e0' 
+            } 
+          },
+          splitLine: { 
+            show: true,
+            lineStyle: { 
+              color: isDarkMode ? '#2a2e39' : '#f5f5f5'
+            }
+          },
+          min: 'dataMin',
+          max: 'dataMax',
+          axisLabel: {
+            show: true,
+            color: isDarkMode ? '#787b86' : '#999999'
+          }
+        },
+        {
+          type: 'category',
+          gridIndex: 1,
+          data: data.categoryData,
+          boundaryGap: true,
+          axisLine: { 
+            lineStyle: { 
+              color: isDarkMode ? '#2a2e39' : '#e0e0e0' 
+            } 
+          },
+          axisTick: { show: false },
+          splitLine: { show: false },
+          axisLabel: { show: false },
+          min: 'dataMin',
+          max: 'dataMax'
+        }
+      ],
+      yAxis: [
+        {
+          scale: true,
+          splitNumber: 6,
+          position: 'right',
+          axisLine: {
+            lineStyle: {
+              color: isDarkMode ? '#2a2e39' : '#e0e0e0'
+            }
+          },
+          splitLine: {
+            show: true,
+            lineStyle: {
+              color: isDarkMode ? '#2a2e39' : '#f5f5f5'
+            }
+          },
+          axisLabel: {
+            color: isDarkMode ? '#787b86' : '#999999',
+            formatter: (value: number) => value.toFixed(2)
+          }
+        },
+        {
+          scale: true,
+          gridIndex: 1,
+          splitNumber: 2,
+          position: 'right',
+          axisLine: {
+            lineStyle: {
+              color: isDarkMode ? '#2a2e39' : '#e0e0e0'
+            }
+          },
+          axisLabel: {
+            color: isDarkMode ? '#787b86' : '#999999',
+            formatter: (value: number) => value.toFixed(0)
+          },
+          splitLine: { show: false }
+        }
+      ],
+      dataZoom: [
+        {
+          type: 'inside',
+          xAxisIndex: [0, 1],
+          start: 0,
+          end: 100
+        },
+        {
+          show: true,
+          type: 'slider',
+          bottom: 5,
+          height: 30,
+          xAxisIndex: [0, 1],
+          start: 0,
+          end: 100,
+          handleIcon: 'path://M10.7,11.9H9.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4h1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z',
+          handleSize: '120%',
+          handleStyle: {
+            color: isDarkMode ? '#2962ff' : '#1e88e5',
+            shadowBlur: 3,
+            shadowColor: 'rgba(0, 0, 0, 0.6)',
+            shadowOffsetX: 2,
+            shadowOffsetY: 2
+          }
+        }
+      ],
+      series
+    };
+
+    try {
+      chartInstance.current.setOption(option, true);
+      console.log('Chart options set successfully');
+    } catch (error) {
+      console.error('Error setting chart options:', error);
+    }
   }, [data, settings, isDarkMode]);
 
   return (
@@ -267,7 +333,18 @@ export const Chart: React.FC<ChartProps> = ({
       </div>
 
       {/* Chart Container */}
-      <div ref={chartRef} className="w-full h-full" />
+      <div 
+        ref={chartRef} 
+        style={{ 
+          width: '100%', 
+          height: '100%',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0
+        }} 
+      />
     </div>
   );
 };

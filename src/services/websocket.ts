@@ -1,4 +1,5 @@
 import { WebSocketMessage, Candle } from '../types/chart';
+import { ChartDataProcessor } from '../utils/chartDataProcessor';
 
 export class WebSocketService {
   private ws: WebSocket | null = null;
@@ -10,97 +11,85 @@ export class WebSocketService {
   private reconnectDelay: number = 5000;
   private isConnected: boolean = false;
   private mockDataInterval: NodeJS.Timeout | null = null;
-  private lastCandle: Candle | null = null;
+  private dataProcessor: ChartDataProcessor;
 
   constructor(symbol: string, wsUrl: string) {
     this.symbol = symbol;
     this.wsUrl = wsUrl;
+    this.dataProcessor = new ChartDataProcessor();
   }
 
-  public connect(handler: (data: any) => void) {
+  private async fetchHistoricalData() {
+    try {
+      const response = await fetch(`https://api.binance.com/api/v3/klines?symbol=${this.symbol.toUpperCase()}&interval=${this.wsUrl}&limit=100`);
+      const data = await response.json();
+      
+      const candles: Candle[] = data.map((item: any) => ({
+        time: item[0],
+        timestamp: new Date(item[0]).toLocaleTimeString(),
+        open: parseFloat(item[1]),
+        high: parseFloat(item[2]),
+        low: parseFloat(item[3]),
+        close: parseFloat(item[4]),
+        volume: parseFloat(item[5]),
+        isComplete: true
+      }));
+
+      this.dataProcessor.setHistoricalData(candles);
+      
+      if (this.messageHandler) {
+        const chartData = this.dataProcessor.formatChartData();
+        const currentPrice = this.dataProcessor.getCurrentPrice();
+        const priceChange = this.dataProcessor.getPriceChange();
+        
+        this.messageHandler({
+          ...chartData,
+          currentPrice,
+          priceChange
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching historical data:', error);
+    }
+  }
+
+  public async connect(handler: (data: any) => void) {
     this.messageHandler = handler;
+    
+    // Fetch historical data first
+    await this.fetchHistoricalData();
     
     if (this.ws) {
       this.ws.close();
     }
 
     // Format WebSocket URL for Binance
-    const wsEndpoint = `wss://stream.binance.com:9443/ws/${this.wsUrl}`;
+    const wsEndpoint = `wss://stream.binance.com:9443/ws/${this.symbol}@kline_${this.wsUrl}`;
     this.ws = new WebSocket(wsEndpoint);
 
     this.ws.onopen = () => {
       console.log('WebSocket Connected');
       this.isConnected = true;
       this.reconnectAttempts = 0;
-
-      // Subscribe to the kline stream
-      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        const subscribeMessage = {
-          method: 'SUBSCRIBE',
-          params: [`${this.symbol}@kline_${this.wsUrl}`],
-          id: 1
-        };
-        this.ws.send(JSON.stringify(subscribeMessage));
-      }
     };
 
     this.ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.k) { // Kline data
-        const kline = data.k;
-        const processedData = {
-          time: new Date(kline.t).toLocaleTimeString(),
-          timestamp: kline.t,
-          open: parseFloat(kline.o),
-          high: parseFloat(kline.h),
-          low: parseFloat(kline.l),
-          close: parseFloat(kline.c),
-          volume: parseFloat(kline.v),
-          isComplete: kline.x,
-          interval: kline.i,
-          firstTrade: kline.f,
-          lastTrade: kline.L,
-          symbol: kline.s
-        };
-
-        // Update or create new candle
-        if (this.lastCandle && this.lastCandle.timestamp === processedData.timestamp) {
-          // Update existing candle
-          this.lastCandle = {
-            ...this.lastCandle,
-            close: processedData.close,
-            high: Math.max(this.lastCandle.high, processedData.high),
-            low: Math.min(this.lastCandle.low, processedData.low),
-            volume: processedData.volume
-          };
+      try {
+        const message: WebSocketMessage = JSON.parse(event.data);
+        const chartData = this.dataProcessor.processWebSocketMessage(message);
+        
+        if (chartData && this.messageHandler) {
+          const currentPrice = this.dataProcessor.getCurrentPrice();
+          const priceChange = this.dataProcessor.getPriceChange();
           
-          if (processedData.isComplete) {
-            // Candle is complete, send final update
-            if (this.messageHandler) {
-              this.messageHandler({
-                ...this.lastCandle,
-                isComplete: true
-              });
-            }
-            this.lastCandle = null;
-          } else if (this.messageHandler) {
-            // Send interim update
-            this.messageHandler(this.lastCandle);
-          }
-        } else {
-          // New candle
-          if (this.lastCandle && !this.lastCandle.isComplete && this.messageHandler) {
-            // Complete the previous candle if it exists
-            this.messageHandler({
-              ...this.lastCandle,
-              isComplete: true
-            });
-          }
-          this.lastCandle = processedData;
-          if (this.messageHandler) {
-            this.messageHandler(processedData);
-          }
+          this.messageHandler({
+            ...chartData,
+            currentPrice,
+            priceChange
+          });
         }
+      } catch (error) {
+        console.error('Error processing message:', error);
       }
     };
 
@@ -120,42 +109,55 @@ export class WebSocketService {
   private startMockDataFeed() {
     if (this.mockDataInterval) return;
 
-    let lastPrice = 50000; // Starting mock price
+    let lastPrice = 50000;
     let lastTime = Date.now();
-    let lastVolume = 1000;
 
     this.mockDataInterval = setInterval(() => {
       const now = Date.now();
       const change = (Math.random() - 0.5) * 100;
       const newPrice = lastPrice + change;
-      const volumeChange = (Math.random() - 0.5) * 200;
-      const newVolume = Math.max(0, lastVolume + volumeChange);
       
-      const mockData = {
-        time: new Date(now).toLocaleTimeString(),
-        timestamp: now,
-        open: lastPrice,
-        close: newPrice,
-        high: Math.max(lastPrice, newPrice) + Math.random() * 20,
-        low: Math.min(lastPrice, newPrice) - Math.random() * 20,
-        volume: newVolume,
-        isComplete: now - lastTime >= 60000,
-        interval: this.wsUrl,
-        firstTrade: now - 60000,
-        lastTrade: now,
-        symbol: this.symbol
+      const mockMessage: WebSocketMessage = {
+        e: 'kline',
+        E: now,
+        s: this.symbol,
+        k: {
+          t: now,
+          T: now + 60000,
+          s: this.symbol,
+          i: this.wsUrl,
+          f: now - 60000,
+          L: now,
+          o: lastPrice.toString(),
+          c: newPrice.toString(),
+          h: Math.max(lastPrice, newPrice).toString(),
+          l: Math.min(lastPrice, newPrice).toString(),
+          v: (Math.random() * 100).toString(),
+          n: 100,
+          x: now - lastTime >= 60000,
+          q: '0',
+          V: '0',
+          Q: '0',
+          B: '0'
+        }
       };
 
-      if (mockData.isComplete) {
-        lastTime = now;
+      const chartData = this.dataProcessor.processWebSocketMessage(mockMessage);
+      if (chartData && this.messageHandler) {
+        const currentPrice = this.dataProcessor.getCurrentPrice();
+        const priceChange = this.dataProcessor.getPriceChange();
+        
+        this.messageHandler({
+          ...chartData,
+          currentPrice,
+          priceChange
+        });
       }
 
-      lastPrice = newPrice;
-      lastVolume = newVolume;
-      
-      if (this.messageHandler) {
-        this.messageHandler(mockData);
+      if (mockMessage.k.x) {
+        lastTime = now;
       }
+      lastPrice = newPrice;
     }, 1000);
   }
 
@@ -174,7 +176,7 @@ export class WebSocketService {
         if (this.messageHandler) {
           this.connect(this.messageHandler);
         }
-      }, this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1)); // Exponential backoff
+      }, this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1));
     } else {
       console.log('Max reconnection attempts reached, falling back to mock data');
       this.startMockDataFeed();
@@ -186,34 +188,24 @@ export class WebSocketService {
 
     if (this.ws) {
       if (this.isConnected && this.ws.readyState === WebSocket.OPEN) {
-        try {
-          const unsubscribeMessage = {
-            method: 'UNSUBSCRIBE',
-            params: [`${this.symbol}@kline_${this.wsUrl}`],
-            id: 1
-          };
-          this.ws.send(JSON.stringify(unsubscribeMessage));
-        } catch (error) {
-          console.error('Error sending unsubscribe message:', error);
-        }
+        const unsubscribeMessage = {
+          method: 'UNSUBSCRIBE',
+          params: [`${this.symbol}@kline_${this.wsUrl}`],
+          id: 1
+        };
+        this.ws.send(JSON.stringify(unsubscribeMessage));
       }
       
-      try {
-        this.ws.close();
-      } catch (error) {
-        console.error('Error closing WebSocket:', error);
-      }
-      
+      this.ws.close();
       this.ws = null;
       this.isConnected = false;
-      this.lastCandle = null;
     }
   }
 
   public changeSymbol(symbol: string) {
     this.symbol = symbol;
     this.reconnectAttempts = 0;
-    this.lastCandle = null;
+    this.dataProcessor = new ChartDataProcessor();
     if (this.messageHandler) {
       this.disconnect();
       this.connect(this.messageHandler);
@@ -223,7 +215,7 @@ export class WebSocketService {
   public changeInterval(interval: string) {
     this.wsUrl = interval;
     this.reconnectAttempts = 0;
-    this.lastCandle = null;
+    this.dataProcessor = new ChartDataProcessor();
     if (this.messageHandler) {
       this.disconnect();
       this.connect(this.messageHandler);

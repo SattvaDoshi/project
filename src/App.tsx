@@ -12,32 +12,66 @@ const MAX_CANDLES = 200;
 const initialData: ChartData = {
   categoryData: [],
   values: [],
-  volumes: []
+  volumes: [],
+  itemStyle: {
+    color: '#26a69a',
+    borderColor: '#26a69a',
+    color0: '#ef5350',
+    borderColor0: '#ef5350'
+  }
 };
 
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [activeTool, setActiveTool] = useState('pointer');
-  const [chartData, setChartData] = useState(initialData);
+  const [chartData, setChartData] = useState<ChartData>({
+    categoryData: [],
+    values: [],
+    volumes: [],
+    itemStyle: {
+      color: '#26a69a',
+      borderColor: '#26a69a',
+      color0: '#ef5350',
+      borderColor0: '#ef5350'
+    }
+  });
   const [settings, setSettings] = useState<IndicatorSettings>({
-    volume: DEFAULT_INDICATOR_SETTINGS.volume,
-    ma5: false,
-    ma10: false,
-    ma20: false,
-    ema20: false,
-    showVolume: false,
-    showBB: false,
-    showSuperTrend: false,
-    showVWAP: false,
-    showIchimoku: false,
-    showPivots: false,
-    showAVWAP: false
+    sma: {
+      enabled: false,
+      period: 20,
+      color: '#2962FF'
+    },
+    ema: {
+      enabled: false,
+      period: 20,
+      color: '#FF6B6B'
+    },
+    wma: {
+      enabled: false,
+      period: 20,
+      color: '#33B252'
+    },
+    bb: {
+      enabled: false,
+      period: 20,
+      stdDev: 2,
+      color: '#B71CFF'
+    },
+    vwap: {
+      enabled: false,
+      color: '#FF9800'
+    },
+    volume: {
+      enabled: true,
+      upColor: '#26a69a',
+      downColor: '#ef5350'
+    }
   });
   const [signals, setSignals] = useState<Signal[]>([]);
   const [wsService, setWsService] = useState<WebSocketService | null>(null);
-  const [currentPrice, setCurrentPrice] = useState<string>('0.00');
-  const [priceChange, setPriceChange] = useState<{ value: string; percentage: string }>({ value: '0.00', percentage: '0.00' });
-  const [selectedTimeframe, setSelectedTimeframe] = useState<string>('1m');
+  const [currentPrice, setCurrentPrice] = useState('0.00');
+  const [priceChange, setPriceChange] = useState({ value: '0.00', percentage: '0.00' });
+  const [selectedTimeframe, setSelectedTimeframe] = useState('1m');
   const [showIndicatorModal, setShowIndicatorModal] = useState(false);
 
   const updateChartData = useCallback((data: any) => {
@@ -49,7 +83,7 @@ function App() {
         // Add new complete candle
         newData.categoryData = [...prevData.categoryData, timeStr];
         newData.values = [...prevData.values, [data.open, data.close, data.high, data.low]];
-        newData.volumes = [...prevData.volumes, [timeStr, data.volume, data.close - data.open]];
+        newData.volumes = [...prevData.volumes, data.volume];
 
         // Keep only last MAX_CANDLES candles
         if (newData.categoryData.length > MAX_CANDLES) {
@@ -64,12 +98,12 @@ function App() {
           newData.values = [...prevData.values];
           newData.volumes = [...prevData.volumes];
           newData.values[lastIndex] = [data.open, data.close, data.high, data.low];
-          newData.volumes[lastIndex] = [timeStr, data.volume, data.close - data.open];
+          newData.volumes[lastIndex] = data.volume;
         } else {
           // First candle
           newData.categoryData = [timeStr];
           newData.values = [[data.open, data.close, data.high, data.low]];
-          newData.volumes = [[timeStr, data.volume, data.close - data.open]];
+          newData.volumes = [data.volume];
         }
       }
 
@@ -87,21 +121,34 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const ws = new WebSocketService(DEFAULT_SYMBOL, TIMEFRAMES[selectedTimeframe].wsUrl);
+    const ws = new WebSocketService('btcusdt', TIMEFRAMES[selectedTimeframe].interval);
     setWsService(ws);
 
-    // Reset chart data when timeframe changes
-    setChartData(initialData);
-
-    ws.connect(updateChartData);
+    ws.connect((data) => {
+      if (data.categoryData && data.values && data.volumes) {
+        setChartData({
+          categoryData: data.categoryData,
+          values: data.values,
+          volumes: data.volumes,
+          itemStyle: {
+            color: '#26a69a',
+            borderColor: '#26a69a',
+            color0: '#ef5350',
+            borderColor0: '#ef5350'
+          }
+        });
+        setCurrentPrice(data.currentPrice);
+        setPriceChange(data.priceChange);
+      }
+    });
 
     return () => {
       ws.disconnect();
     };
-  }, [selectedTimeframe, updateChartData]);
+  }, [selectedTimeframe]);
 
   const handleThemeToggle = () => {
-    setIsDarkMode(!isDarkMode);
+    setIsDarkMode(prev => !prev);
     document.body.classList.toggle('dark-mode');
     document.body.classList.toggle('light-mode');
   };
@@ -113,7 +160,10 @@ function App() {
   const handleSettingChange = (setting: string, value: boolean) => {
     setSettings(prev => ({
       ...prev,
-      [setting]: value
+      [setting]: {
+        ...prev[setting as keyof IndicatorSettings],
+        enabled: value
+      }
     }));
   };
 
@@ -126,12 +176,14 @@ function App() {
   };
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'bg-[#131722]' : 'bg-white'}`}>
+    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
       <TopNav 
         onThemeToggle={handleThemeToggle} 
         isDarkMode={isDarkMode}
         selectedTimeframe={selectedTimeframe}
         onTimeframeChange={handleTimeframeChange}
+        settings={settings}
+        onSettingChange={handleSettingChange}
         onIndicatorClick={handleIndicatorClick}
       />
       <SidePanel onToolSelect={setActiveTool} activeTool={activeTool} />
@@ -194,7 +246,7 @@ function App() {
                             <label key={key} className="flex items-center space-x-2">
                               <input
                                 type="checkbox"
-                                checked={value}
+                                checked={value.enabled}
                                 onChange={(e) => handleSettingChange(key, e.target.checked)}
                                 className="form-checkbox text-[#2962ff] rounded border-[#363c4e]"
                               />

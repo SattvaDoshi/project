@@ -1,5 +1,5 @@
 import React from 'react';
-import { LineChart, Activity, TrendingUp, BarChart2 } from 'lucide-react';
+import { LineChart, Activity, TrendingUp, BarChart2, Waves } from 'lucide-react';
 import { TIMEFRAMES } from '../utils/constants';
 import { IndicatorSettings } from '../types/chart';
 
@@ -38,45 +38,75 @@ export const TimeframeIndicatorMenu: React.FC<TimeframeIndicatorMenuProps> = ({
         </div>
       </div>
 
-      {/* Indicators */}
-      <div>
-        <h3 className="text-[#787b86] text-xs mb-2">Indicators</h3>
-        <div className="grid grid-cols-2 gap-2">
+      {/* Moving Averages */}
+      <div className="mb-4">
+        <h3 className="text-[#787b86] text-xs mb-2">Moving Averages</h3>
+        <div className="grid grid-cols-3 gap-2">
           <button
-            onClick={() => onSettingChange('ma', !settings.ma)}
+            onClick={() => onSettingChange('sma', !settings.sma.enabled)}
             className={`flex items-center px-3 py-1.5 rounded text-sm ${
-              settings.ma ? 'bg-[#2962ff] text-white' : 'text-[#787b86] hover:bg-[#2a2e39] hover:text-[#d1d4dc]'
+              settings.sma.enabled ? 'bg-[#2962ff] text-white' : 'text-[#787b86] hover:bg-[#2a2e39] hover:text-[#d1d4dc]'
             }`}
+            style={{ borderLeft: `3px solid ${settings.sma.color}` }}
           >
             <LineChart size={16} className="mr-2" />
-            MA
+            SMA {settings.sma.period}
           </button>
           <button
-            onClick={() => onSettingChange('bb', !settings.bb)}
+            onClick={() => onSettingChange('ema', !settings.ema.enabled)}
             className={`flex items-center px-3 py-1.5 rounded text-sm ${
-              settings.bb ? 'bg-[#2962ff] text-white' : 'text-[#787b86] hover:bg-[#2a2e39] hover:text-[#d1d4dc]'
+              settings.ema.enabled ? 'bg-[#2962ff] text-white' : 'text-[#787b86] hover:bg-[#2a2e39] hover:text-[#d1d4dc]'
             }`}
+            style={{ borderLeft: `3px solid ${settings.ema.color}` }}
           >
-            <Activity size={16} className="mr-2" />
-            BB
+            <LineChart size={16} className="mr-2" />
+            EMA {settings.ema.period}
           </button>
           <button
-            onClick={() => onSettingChange('vwap', !settings.vwap)}
+            onClick={() => onSettingChange('wma', !settings.wma.enabled)}
             className={`flex items-center px-3 py-1.5 rounded text-sm ${
-              settings.vwap ? 'bg-[#2962ff] text-white' : 'text-[#787b86] hover:bg-[#2a2e39] hover:text-[#d1d4dc]'
+              settings.wma.enabled ? 'bg-[#2962ff] text-white' : 'text-[#787b86] hover:bg-[#2a2e39] hover:text-[#d1d4dc]'
             }`}
+            style={{ borderLeft: `3px solid ${settings.wma.color}` }}
+          >
+            <LineChart size={16} className="mr-2" />
+            WMA {settings.wma.period}
+          </button>
+        </div>
+      </div>
+
+      {/* Other Indicators */}
+      <div>
+        <h3 className="text-[#787b86] text-xs mb-2">Other Indicators</h3>
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            onClick={() => onSettingChange('bb', !settings.bb.enabled)}
+            className={`flex items-center px-3 py-1.5 rounded text-sm ${
+              settings.bb.enabled ? 'bg-[#2962ff] text-white' : 'text-[#787b86] hover:bg-[#2a2e39] hover:text-[#d1d4dc]'
+            }`}
+            style={{ borderLeft: `3px solid ${settings.bb.color}` }}
+          >
+            <Waves size={16} className="mr-2" />
+            BB {settings.bb.period}
+          </button>
+          <button
+            onClick={() => onSettingChange('vwap', !settings.vwap.enabled)}
+            className={`flex items-center px-3 py-1.5 rounded text-sm ${
+              settings.vwap.enabled ? 'bg-[#2962ff] text-white' : 'text-[#787b86] hover:bg-[#2a2e39] hover:text-[#d1d4dc]'
+            }`}
+            style={{ borderLeft: `3px solid ${settings.vwap.color}` }}
           >
             <TrendingUp size={16} className="mr-2" />
             VWAP
           </button>
           <button
-            onClick={() => onSettingChange('volume', !settings.volume)}
+            onClick={() => onSettingChange('volume', !settings.volume.enabled)}
             className={`flex items-center px-3 py-1.5 rounded text-sm ${
-              settings.volume ? 'bg-[#2962ff] text-white' : 'text-[#787b86] hover:bg-[#2a2e39] hover:text-[#d1d4dc]'
+              settings.volume.enabled ? 'bg-[#2962ff] text-white' : 'text-[#787b86] hover:bg-[#2a2e39] hover:text-[#d1d4dc]'
             }`}
           >
             <BarChart2 size={16} className="mr-2" />
-            Volume
+            VOL
           </button>
         </div>
       </div>
