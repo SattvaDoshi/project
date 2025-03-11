@@ -98,7 +98,7 @@ export const Chart: React.FC<ChartProps> = ({
     legendData.push('Candlestick');
 
     // Add volume bars if enabled
-    if (settings.volume.enabled) {
+    if (settings.volume?.enabled) {
       const volumeSeries: SeriesOption = {
         name: 'Volume',
         type: 'bar',
@@ -118,7 +118,7 @@ export const Chart: React.FC<ChartProps> = ({
     }
 
     // Add SMA if enabled
-    if (settings.sma.enabled) {
+    if (settings.sma?.enabled) {
       const smaData = calculateMA(data.values, settings.sma.period);
       const smaSeries: SeriesOption = {
         name: `SMA(${settings.sma.period})`,
@@ -136,7 +136,7 @@ export const Chart: React.FC<ChartProps> = ({
     }
 
     // Add EMA if enabled
-    if (settings.ema.enabled) {
+    if (settings.ema?.enabled) {
       const emaData = calculateMA(data.values, settings.ema.period, 'ema');
       const emaSeries: SeriesOption = {
         name: `EMA(${settings.ema.period})`,
@@ -154,7 +154,7 @@ export const Chart: React.FC<ChartProps> = ({
     }
 
     // Add WMA if enabled
-    if (settings.wma.enabled) {
+    if (settings.wma?.enabled) {
       const wmaData = calculateMA(data.values, settings.wma.period, 'wma');
       const wmaSeries: SeriesOption = {
         name: `WMA(${settings.wma.period})`,
@@ -172,7 +172,7 @@ export const Chart: React.FC<ChartProps> = ({
     }
 
     // Add Bollinger Bands if enabled
-    if (settings.bb.enabled) {
+    if (settings.bb?.enabled) {
       const bbData = calculateBollingerBands(data.values, settings.bb.period, settings.bb.stdDev);
       const bbSeries: SeriesOption[] = [
         {
@@ -219,7 +219,7 @@ export const Chart: React.FC<ChartProps> = ({
     }
 
     // Add VWAP if enabled
-    if (settings.vwap.enabled) {
+    if (settings.vwap?.enabled) {
       const vwapData = calculateVWAP(data.values, data.volumes);
       const vwapSeries: SeriesOption = {
         name: 'VWAP',
@@ -450,22 +450,13 @@ export const Chart: React.FC<ChartProps> = ({
     };
 
     try {
-      // Force a complete chart update when volume is toggled
-      const currentOptions = chartInstance.current.getOption();
-      const currentYAxisCount = Array.isArray(currentOptions?.yAxis) ? currentOptions.yAxis.length : 1;
-      const shouldForceUpdate = currentYAxisCount !== (settings.volume.enabled ? 2 : 1);
-      
+      // Always force a complete chart update when indicators change
+      chartInstance.current.clear();
       chartInstance.current.setOption(option, {
-        notMerge: shouldForceUpdate, // Force complete redraw when volume is toggled
+        notMerge: true,
         lazyUpdate: false,
         silent: false
       });
-
-      // Clear the chart and set options again if needed
-      if (shouldForceUpdate) {
-        chartInstance.current.clear();
-        chartInstance.current.setOption(option);
-      }
     } catch (error) {
       console.error('Error setting chart options:', error);
     }
@@ -473,8 +464,10 @@ export const Chart: React.FC<ChartProps> = ({
 
   // Update chart when data or settings change
   useEffect(() => {
-    updateChartOptions();
-  }, [updateChartOptions]);
+    if (chartInstance.current) {
+      updateChartOptions();
+    }
+  }, [updateChartOptions, settings]);
 
   return (
     <div className="fixed top-14 left-14 right-[20%] bottom-0 bg-[#131722]">
@@ -512,7 +505,17 @@ export const Chart: React.FC<ChartProps> = ({
                   <span>{type.toUpperCase()} {type !== 'volume' && indicator.period}</span>
                 </button>
                 <button
-                  onClick={() => onSettingChange(type, false)}
+                  onClick={() => {
+                    const newSettings = {
+                      ...settings,
+                      [type]: {
+                        ...settings[type as keyof IndicatorSettings],
+                        enabled: false
+                      }
+                    };
+                    onSettingChange(type, false, newSettings);
+                    setActiveIndicator(null);
+                  }}
                   className="text-[#787b86] hover:text-[#d1d4dc]"
                 >
                   <X size={14} />
@@ -534,7 +537,17 @@ export const Chart: React.FC<ChartProps> = ({
               <span>VOLUME</span>
             </button>
             <button
-              onClick={() => onSettingChange('volume', false)}
+              onClick={() => {
+                const newSettings = {
+                  ...settings,
+                  volume: {
+                    ...settings.volume,
+                    enabled: false
+                  }
+                };
+                onSettingChange('volume', false, newSettings);
+                setActiveIndicator(null);
+              }}
               className="text-[#787b86] hover:text-[#d1d4dc]"
             >
               <X size={14} />
