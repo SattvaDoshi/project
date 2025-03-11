@@ -1,8 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as echarts from 'echarts';
 import type { EChartsOption, SeriesOption } from 'echarts';
 import { ChartData, IndicatorSettings } from '../types/chart';
 import { calculateMA, calculateBollingerBands, calculateVWAP } from '../services/indicators';
+import { Settings, X } from 'lucide-react';
+import { IndicatorSettingsPanel } from './IndicatorSettingsPanel';
 
 interface ChartProps {
   data: ChartData;
@@ -15,7 +17,7 @@ interface ChartProps {
   };
   selectedTimeframe: string;
   onTimeframeChange: (timeframe: string) => void;
-  onSettingChange: (setting: string, value: boolean) => void;
+  onSettingChange: (setting: string, value: boolean, newSettings?: IndicatorSettings) => void;
 }
 
 export const Chart: React.FC<ChartProps> = ({ 
@@ -30,6 +32,20 @@ export const Chart: React.FC<ChartProps> = ({
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<echarts.ECharts | null>(null);
+  const dataZoomStateRef = useRef<{ start: number; end: number } | null>(null);
+  const [activeIndicator, setActiveIndicator] = useState<string | null>(null);
+
+  const handleIndicatorUpdate = (type: string, key: string, value: any) => {
+    const newSettings = {
+      ...settings,
+      [type]: {
+        ...settings[type as keyof IndicatorSettings],
+        [key]: value
+      }
+    };
+    // You'll need to add this prop to the Chart component and handle it in the parent
+    onSettingChange(type, true, newSettings);
+  };
 
   // Initialize chart
   useEffect(() => {
@@ -42,6 +58,20 @@ export const Chart: React.FC<ChartProps> = ({
       chart.resize();
     };
 
+    chart.on('datazoom', (params: any) => {
+      if (params.batch) {
+        dataZoomStateRef.current = {
+          start: params.batch[0].start,
+          end: params.batch[0].end
+        };
+      } else {
+        dataZoomStateRef.current = {
+          start: params.start,
+          end: params.end
+        };
+      }
+    });
+
     window.addEventListener('resize', handleResize);
 
     return () => {
@@ -51,14 +81,8 @@ export const Chart: React.FC<ChartProps> = ({
     };
   }, [isDarkMode]);
 
-  // Update chart options
-  useEffect(() => {
-    if (!chartInstance.current || !data.values.length) {
-      console.log('No chart instance or data');
-      return;
-    }
-
-    console.log('Updating chart with data:', data.values.length, 'candles');
+  const updateChartOptions = useCallback(() => {
+    if (!chartInstance.current || !data.values.length) return;
 
     // Initialize series and legend data arrays
     const series: SeriesOption[] = [];
@@ -103,7 +127,8 @@ export const Chart: React.FC<ChartProps> = ({
         smooth: true,
         lineStyle: {
           opacity: 0.8,
-          color: settings.sma.color
+          color: settings.sma.color,
+          width: settings.sma.lineWidth || 1
         }
       };
       series.push(smaSeries);
@@ -120,7 +145,8 @@ export const Chart: React.FC<ChartProps> = ({
         smooth: true,
         lineStyle: {
           opacity: 0.8,
-          color: settings.ema.color
+          color: settings.ema.color,
+          width: settings.ema.lineWidth || 1
         }
       };
       series.push(emaSeries);
@@ -137,7 +163,8 @@ export const Chart: React.FC<ChartProps> = ({
         smooth: true,
         lineStyle: {
           opacity: 0.8,
-          color: settings.wma.color
+          color: settings.wma.color,
+          width: settings.wma.lineWidth || 1
         }
       };
       series.push(wmaSeries);
@@ -155,7 +182,8 @@ export const Chart: React.FC<ChartProps> = ({
           smooth: true,
           lineStyle: {
             opacity: 0.6,
-            color: settings.bb.color
+            color: settings.bb.color,
+            width: settings.bb.lineWidth || 1
           }
         },
         {
@@ -166,6 +194,7 @@ export const Chart: React.FC<ChartProps> = ({
           lineStyle: {
             opacity: 0.6,
             color: settings.bb.color,
+            width: settings.bb.lineWidth || 1,
             type: 'dashed'
           }
         },
@@ -176,7 +205,8 @@ export const Chart: React.FC<ChartProps> = ({
           smooth: true,
           lineStyle: {
             opacity: 0.6,
-            color: settings.bb.color
+            color: settings.bb.color,
+            width: settings.bb.lineWidth || 1
           }
         }
       ];
@@ -198,7 +228,8 @@ export const Chart: React.FC<ChartProps> = ({
         smooth: true,
         lineStyle: {
           opacity: 0.8,
-          color: settings.vwap.color
+          color: settings.vwap.color,
+          width: settings.vwap.lineWidth || 1
         }
       };
       series.push(vwapSeries);
@@ -233,7 +264,7 @@ export const Chart: React.FC<ChartProps> = ({
           backgroundColor: isDarkMode ? '#2a2e39' : '#e0e0e0'
         }
       },
-      grid: [
+      grid: settings.volume.enabled ? [
         {
           left: '3%',
           right: '3%',
@@ -246,27 +277,28 @@ export const Chart: React.FC<ChartProps> = ({
           top: '75%',
           height: '15%'
         }
+      ] : [
+        {
+          left: '3%',
+          right: '3%',
+          top: '8%',
+          height: '82%'
+        }
       ],
-      xAxis: [
+      xAxis: settings.volume.enabled ? [
         {
           type: 'category',
           data: data.categoryData,
-          boundaryGap: true,
-          axisLine: { 
-            lineStyle: { 
-              color: isDarkMode ? '#2a2e39' : '#e0e0e0' 
-            } 
-          },
-          splitLine: { 
-            show: true,
-            lineStyle: { 
-              color: isDarkMode ? '#2a2e39' : '#f5f5f5'
+          boundaryGap: false,
+          axisLine: {
+            lineStyle: {
+              color: isDarkMode ? '#2a2e39' : '#e0e0e0'
             }
           },
+          splitLine: { show: false },
           min: 'dataMin',
           max: 'dataMax',
           axisLabel: {
-            show: true,
             color: isDarkMode ? '#787b86' : '#999999'
           }
         },
@@ -274,11 +306,11 @@ export const Chart: React.FC<ChartProps> = ({
           type: 'category',
           gridIndex: 1,
           data: data.categoryData,
-          boundaryGap: true,
-          axisLine: { 
-            lineStyle: { 
-              color: isDarkMode ? '#2a2e39' : '#e0e0e0' 
-            } 
+          boundaryGap: false,
+          axisLine: {
+            lineStyle: {
+              color: isDarkMode ? '#2a2e39' : '#e0e0e0'
+            }
           },
           axisTick: { show: false },
           splitLine: { show: false },
@@ -286,8 +318,25 @@ export const Chart: React.FC<ChartProps> = ({
           min: 'dataMin',
           max: 'dataMax'
         }
+      ] : [
+        {
+          type: 'category',
+          data: data.categoryData,
+          boundaryGap: false,
+          axisLine: {
+            lineStyle: {
+              color: isDarkMode ? '#2a2e39' : '#e0e0e0'
+            }
+          },
+          splitLine: { show: false },
+          min: 'dataMin',
+          max: 'dataMax',
+          axisLabel: {
+            color: isDarkMode ? '#787b86' : '#999999'
+          }
+        }
       ],
-      yAxis: [
+      yAxis: settings.volume.enabled ? [
         {
           scale: true,
           splitNumber: 6,
@@ -324,13 +373,34 @@ export const Chart: React.FC<ChartProps> = ({
           },
           splitLine: { show: false }
         }
+      ] : [
+        {
+          scale: true,
+          splitNumber: 6,
+          position: 'right',
+          axisLine: {
+            lineStyle: {
+              color: isDarkMode ? '#2a2e39' : '#e0e0e0'
+            }
+          },
+          splitLine: {
+            show: true,
+            lineStyle: {
+              color: isDarkMode ? '#2a2e39' : '#f5f5f5'
+            }
+          },
+          axisLabel: {
+            color: isDarkMode ? '#787b86' : '#999999',
+            formatter: (value: number) => value.toFixed(2)
+          }
+        }
       ],
-      dataZoom: [
+      dataZoom: settings.volume.enabled ? [
         {
           type: 'inside',
           xAxisIndex: [0, 1],
-          start: 0,
-          end: 100
+          start: dataZoomStateRef.current?.start ?? 50,
+          end: dataZoomStateRef.current?.end ?? 100
         },
         {
           show: true,
@@ -338,8 +408,33 @@ export const Chart: React.FC<ChartProps> = ({
           bottom: 5,
           height: 30,
           xAxisIndex: [0, 1],
-          start: 0,
-          end: 100,
+          start: dataZoomStateRef.current?.start ?? 50,
+          end: dataZoomStateRef.current?.end ?? 100,
+          handleIcon: 'path://M10.7,11.9H9.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4h1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z',
+          handleSize: '120%',
+          handleStyle: {
+            color: isDarkMode ? '#2962ff' : '#1e88e5',
+            shadowBlur: 3,
+            shadowColor: 'rgba(0, 0, 0, 0.6)',
+            shadowOffsetX: 2,
+            shadowOffsetY: 2
+          }
+        }
+      ] : [
+        {
+          type: 'inside',
+          xAxisIndex: [0],
+          start: dataZoomStateRef.current?.start ?? 50,
+          end: dataZoomStateRef.current?.end ?? 100
+        },
+        {
+          show: true,
+          type: 'slider',
+          bottom: 5,
+          height: 30,
+          xAxisIndex: [0],
+          start: dataZoomStateRef.current?.start ?? 50,
+          end: dataZoomStateRef.current?.end ?? 100,
           handleIcon: 'path://M10.7,11.9H9.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4h1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z',
           handleSize: '120%',
           handleStyle: {
@@ -355,12 +450,31 @@ export const Chart: React.FC<ChartProps> = ({
     };
 
     try {
-      chartInstance.current.setOption(option, true);
-      console.log('Chart options set successfully');
+      // Force a complete chart update when volume is toggled
+      const currentOptions = chartInstance.current.getOption();
+      const currentYAxisCount = Array.isArray(currentOptions?.yAxis) ? currentOptions.yAxis.length : 1;
+      const shouldForceUpdate = currentYAxisCount !== (settings.volume.enabled ? 2 : 1);
+      
+      chartInstance.current.setOption(option, {
+        notMerge: shouldForceUpdate, // Force complete redraw when volume is toggled
+        lazyUpdate: false,
+        silent: false
+      });
+
+      // Clear the chart and set options again if needed
+      if (shouldForceUpdate) {
+        chartInstance.current.clear();
+        chartInstance.current.setOption(option);
+      }
     } catch (error) {
       console.error('Error setting chart options:', error);
     }
   }, [data, settings, isDarkMode]);
+
+  // Update chart when data or settings change
+  useEffect(() => {
+    updateChartOptions();
+  }, [updateChartOptions]);
 
   return (
     <div className="fixed top-14 left-14 right-[20%] bottom-0 bg-[#131722]">
@@ -371,6 +485,63 @@ export const Chart: React.FC<ChartProps> = ({
           {priceChange.value >= '0' ? '+' : ''}{priceChange.value} ({priceChange.value >= '0' ? '+' : ''}{priceChange.percentage}%)
         </span>
       </div>
+
+      {/* Settings Modal */}
+      {activeIndicator && (
+        <IndicatorSettingsPanel
+          settings={settings}
+          onSettingChange={onSettingChange}
+          activeIndicator={activeIndicator}
+          onClose={() => setActiveIndicator(null)}
+          position={activeIndicator === 'volume' ? 'bottom' : 'top'}
+        />
+      )}
+
+      {/* Active Indicators List */}
+      <div className="absolute top-4 left-4 z-10">
+        <div className="space-y-1">
+          {Object.entries(settings)
+            .filter(([type, value]) => value.enabled && type !== 'volume')
+            .map(([type, indicator]) => (
+              <div key={type} className="flex items-center space-x-2 text-sm text-[#d1d4dc] bg-[#1e222d] px-3 py-2 rounded">
+                <button
+                  onClick={() => setActiveIndicator(type)}
+                  className="flex items-center space-x-2 hover:text-white"
+                >
+                  <Settings size={14} className="text-[#787b86]" />
+                  <span>{type.toUpperCase()} {type !== 'volume' && indicator.period}</span>
+                </button>
+                <button
+                  onClick={() => onSettingChange(type, false)}
+                  className="text-[#787b86] hover:text-[#d1d4dc]"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+        </div>
+      </div>
+
+      {/* Volume Indicator Controls */}
+      {settings.volume.enabled && (
+        <div className="absolute left-4 bottom-[20%] z-10">
+          <div className="flex items-center space-x-2 text-sm text-[#d1d4dc] bg-[#1e222d] px-3 py-2 rounded">
+            <button
+              onClick={() => setActiveIndicator('volume')}
+              className="flex items-center space-x-2 hover:text-white"
+            >
+              <Settings size={14} className="text-[#787b86]" />
+              <span>VOLUME</span>
+            </button>
+            <button
+              onClick={() => onSettingChange('volume', false)}
+              className="text-[#787b86] hover:text-[#d1d4dc]"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Chart Container */}
       <div 

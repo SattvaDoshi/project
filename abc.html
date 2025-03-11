@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading View</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+</head>
+<body class="dark-mode">
+    <div class="trading-container">
+        <!-- Top Navigation Bar -->
+        <div class="top-nav">
+            <div class="left-controls">
+                <div class="symbol-info">
+                    <span class="symbol">NIFTY</span>
+                    <span class="exchange">NSE</span>
+                </div>
+                <div class="timeframe-controls">
+                    <button class="active">1m</button>
+                    <button>5m</button>
+                    <button>15m</button>
+                    <button>1h</button>
+                    <button>D</button>
+                    <button>W</button>
+                    <button>M</button>
+                </div>
+                <div class="chart-controls">
+                    <button><i class="fas fa-chart-line"></i></button>
+                    <button><i class="fas fa-chart-bar"></i></button>
+                </div>
+                <div class="indicators">
+                    <button><i class="fas fa-wave-square"></i> Indicators</button>
+                </div>
+            </div>
+            <div class="right-controls">
+                <button><i class="fas fa-bell"></i></button>
+                <button><i class="fas fa-undo"></i> Replay</button>
+                <button id="themeToggle">
+                    <span class="light"><i class="fas fa-sun"></i></span>
+                    <span class="dark"><i class="fas fa-moon"></i></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Side Tools Panel -->
+        <div class="side-panel">
+            <button><i class="fas fa-mouse-pointer"></i></button>
+            <button><i class="fas fa-crosshairs"></i></button>
+            <button><i class="fas fa-pen"></i></button>
+            <button><i class="fas fa-shapes"></i></button>
+            <button><i class="fas fa-text-height"></i></button>
+            <button><i class="fas fa-ruler"></i></button>
+            <button><i class="fas fa-arrows-alt"></i></button>
+            <button><i class="fas fa-magnet"></i></button>
+            <button><i class="fas fa-trash-alt"></i></button>
+        </div>
+
+        <!-- Main Chart Area -->
+        <div class="chart-container">
+            <div class="price-info">
+                <div class="current-price">
+                    <span id="price">22,544.35</span>
+                    <span id="change" class="negative">-14.20 (-0.06%)</span>
+                </div>
+            </div>
+            <div id="main"></div>
+        </div>
+
+        <!-- Add this after the chart-container div -->
+        <div id="indicatorsModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Indicators, metrics, and strategies</h2>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="modal-search">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search">
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div class="indicators-list">
+                        <div class="category">
+                            <button class="category-btn">
+                                <i class="far fa-star"></i>
+                                Favorites
+                            </button>
+                        </div>
+                        <div class="category">
+                            <button class="category-btn">
+                                <i class="fas fa-user"></i>
+                                Personal
+                            </button>
+                        </div>
+                        <div class="category">
+                            <button class="category-btn">
+                                <i class="fas fa-chart-line"></i>
+                                Technicals
+                            </button>
+                        </div>
+                        <div class="category">
+                            <button class="category-btn">
+                                <i class="fas fa-dollar-sign"></i>
+                                Financials
+                            </button>
+                        </div>
+                        <div class="category">
+                            <button class="category-btn">
+                                <i class="fas fa-users"></i>
+                                Community
+                            </button>
+                        </div>
+                    </div>
+                    <div class="indicators-content" id="technicalIndicators" style="display: none;">
+                        <div class="indicator-group">
+                            <h3>Moving Averages</h3>
+                            <div class="indicator-item">
+                                <span class="indicator-check">
+                                    <input type="checkbox" id="ma5">
+                                </span>
+                                <span class="name">MA 5</span>
+                                <span class="color-dot" style="background-color: #2962ff"></span>
+                            </div>
+                            <div class="indicator-item">
+                                <span class="indicator-check">
+                                    <input type="checkbox" id="ma10">
+                                </span>
+                                <span class="name">MA 10</span>
+                                <span class="color-dot" style="background-color: #ff9800"></span>
+                            </div>
+                            <div class="indicator-item">
+                                <span class="indicator-check">
+                                    <input type="checkbox" id="ma20">
+                                </span>
+                                <span class="name">MA 20</span>
+                                <span class="color-dot" style="background-color: #e91e63"></span>
+                            </div>
+                            <div class="indicator-item">
+                                <span class="indicator-check">
+                                    <input type="checkbox" id="ema20">
+                                </span>
+                                <span class="name">EMA 20</span>
+                                <span class="color-dot" style="background-color: #00bcd4"></span>
+                            </div>
+                            <div class="indicator-item">
+                                <span class="indicator-check">
+                                    <input type="checkbox" id="showWMA">
+                                </span>
+                                <span class="name">WMA</span>
+                                <span class="color-dot" style="background-color: #3f51b5"></span>
+                            </div>
+                            <div class="indicator-item">
+                                <span class="indicator-check">
+                                    <input type="checkbox" id="showIchimoku">
+                                </span>
+                                <span class="name">Ichimoku Cloud</span>
+                                <span class="color-dot" style="background-color: #7b1fa2"></span>
+                            </div>
+                            <div class="indicator-item">
+                                <span class="indicator-check">
+                                    <input type="checkbox" id="showPivots">
+                                </span>
+                                <span class="name">Pivot Points</span>
+                                <span class="color-dot" style="background-color: #ffd700"></span>
+                            </div>
+                            <div class="indicator-item">
+                                <span class="indicator-check">
+                                    <input type="checkbox" id="showBB">
+                                </span>
+                                <span class="name">Bollinger Bands</span>
+                                <span class="color-dot" style="background-color: #4caf50"></span>
+                            </div>
+                            <div class="indicator-item">
+                                <span class="indicator-check">
+                                    <input type="checkbox" id="showSuperTrend">
+                                </span>
+                                <span class="name">Super Trend</span>
+                                <span class="color-dot" style="background-color: #673ab7"></span>
+                            </div>
+                            <div class="indicator-item">
+                                <span class="indicator-check">
+                                    <input type="checkbox" id="showVWAP">
+                                </span>
+                                <span class="name">VWAP</span>
+                                <span class="color-dot" style="background-color: #e91e63"></span>
+                            </div>
+                        </div>
+                        <div class="indicator-group">
+                            <h3>Volume Studies</h3>
+                            <div class="indicator-item">
+                                <span class="indicator-check">
+                                    <input type="checkbox" id="showVolume">
+                                </span>
+                                <span class="name">Volume</span>
+                                <span class="color-dot" style="background-color: #26a69a"></span>
+                            </div>
+                            <div class="indicator-item">
+                                <span class="indicator-check">
+                                    <input type="checkbox" id="showAVWAP">
+                                </span>
+                                <span class="name">AVWAP</span>
+                                <span class="color-dot" style="background-color: #9c27b0"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add this before closing the trading-container div -->
+        <div class="strategy-assistant">
+            <div class="assistant-header">
+                <h3><i class="fas fa-robot"></i> Tusta AI Assistant</h3>
+                <button class="minimize-assistant"><i class="fas fa-minus"></i></button>
+            </div>
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message assistant">
+                        <div class="message-content">
+                            Hello! I'm Tusta, your trading strategy assistant. I can help you create simple indicator crossing strategies.
+                        </div>
+                    </div>
+                </div>
+                <div class="strategy-form">
+                    <div class="form-group">
+                        <label>First Indicator</label>
+                        <select id="strategyFirstIndicator">
+                            <option value="">Select First Indicator</option>
+                            <option value="ma5">MA 5</option>
+                            <option value="ma10">MA 10</option>
+                            <option value="ma20">MA 20</option>
+                            <option value="ema20">EMA 20</option>
+                            <option value="showBB">Bollinger Bands</option>
+                            <option value="showSuperTrend">Super Trend</option>
+                            <option value="showVWAP">VWAP</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Condition</label>
+                        <select id="strategyCrossCondition">
+                            <option value="">Select Condition</option>
+                            <option value="crosses_above">Crosses Above</option>
+                            <option value="crosses_below">Crosses Below</option>
+                            <option value="greater_than">Greater Than</option>
+                            <option value="less_than">Less Than</option>
+                            <option value="equal_to">Equal To</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Second Indicator</label>
+                        <select id="strategySecondIndicator">
+                            <option value="">Select Second Indicator</option>
+                            <option value="ma5">MA 5</option>
+                            <option value="ma10">MA 10</option>
+                            <option value="ma20">MA 20</option>
+                            <option value="ema20">EMA 20</option>
+                            <option value="showBB">Bollinger Bands</option>
+                            <option value="showSuperTrend">Super Trend</option>
+                            <option value="showVWAP">VWAP</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Signal Settings</label>
+                        <div class="signal-settings">
+                            <div class="signal-color">
+                                <label>Entry Signal Color</label>
+                                <input type="color" id="entrySignalColor" value="#4CAF50">
+                            </div>
+                            <div class="signal-size">
+                                <label>Signal Size</label>
+                                <select id="signalSize">
+                                    <option value="small">Small</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="large">Large</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="applyStrategyIndicators" class="apply-strategy">Apply Strategy</button>
+                </div>
+                <div class="signal-log-box">
+                    <h4>Signal Log</h4>
+                    <div id="signalLog" class="signal-log-content"></div>
+                </div>
+                <div class="chat-input">
+                    <input type="text" id="userInput" placeholder="Ask me about trading strategies...">
+                    <button id="sendMessage"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add this after your existing modals -->
+        <div id="indicatorSettingsModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="settingsModalTitle">Indicator Settings</h2>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="settings-form">
+                        <!-- Moving Averages Settings -->
+                        <div id="smaSettings" class="indicator-settings">
+                            <div class="form-group">
+                                <label>Period</label>
+                                <input type="number" id="smaPeriod" value="20" min="1" max="200">
+                            </div>
+                            <div class="form-group">
+                                <label>Line Color</label>
+                                <input type="color" id="smaColor" value="#2962ff">
+                            </div>
+                            <div class="form-group">
+                                <label>Line Width</label>
+                                <input type="number" id="smaWidth" value="1" min="1" max="5">
+                            </div>
+                        </div>
+
+                        <!-- EMA Settings -->
+                        <div id="emaSettings" class="indicator-settings">
+                            <div id="emaLinesList">
+                                <!-- EMA lines will be dynamically added here -->
+                            </div>
+                            <div class="ema-controls">
+                                <button id="addEmaLine" class="add-ema-button">
+                                    <i class="fas fa-plus"></i> Add EMA Line
+                                </button>
+                            </div>
+                            <div class="ema-template" style="display: none;">
+                                <div class="ema-line-settings">
+                                    <div class="ema-header">
+                                        <h4>EMA Line</h4>
+                                        <button class="remove-ema-line">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Period</label>
+                                        <input type="number" class="ema-period" value="20" min="1" max="200">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Line Color</label>
+                                        <input type="color" class="ema-color" value="#00bcd4">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Line Width</label>
+                                        <input type="number" class="ema-width" value="1" min="1" max="5">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ichimoku Settings -->
+                        <div id="ichimokuSettings" class="indicator-settings">
+                            <div class="settings-group">
+                                <label>Conversion Line (Tenkan-sen) Period:</label>
+                                <input type="number" id="tenkanPeriod" min="1" max="100" value="9">
+                            </div>
+                            <div class="settings-group">
+                                <label>Base Line (Kijun-sen) Period:</label>
+                                <input type="number" id="kijunPeriod" min="1" max="100" value="26">
+                            </div>
+                            <div class="settings-group">
+                                <label>Leading Span B (Senkou Span B) Period:</label>
+                                <input type="number" id="senkouBPeriod" min="1" max="100" value="52">
+                            </div>
+                            <div class="settings-group">
+                                <label>Colors:</label>
+                                <div class="color-settings">
+                                    <div>
+                                        <label>Conversion Line:</label>
+                                        <input type="color" id="tenkanColor" value="#2196f3">
+                                    </div>
+                                    <div>
+                                        <label>Base Line:</label>
+                                        <input type="color" id="kijunColor" value="#ff5722">
+                                    </div>
+                                    <div>
+                                        <label>Cloud (Bullish):</label>
+                                        <input type="color" id="cloudBullColor" value="#4caf5033">
+                                    </div>
+                                    <div>
+                                        <label>Cloud (Bearish):</label>
+                                        <input type="color" id="cloudBearColor" value="#f4433633">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="settings-group">
+                                <label>Line Width:</label>
+                                <input type="number" id="ichimokuWidth" min="1" max="5" value="1">
+                            </div>
+                        </div>
+
+                        <!-- Bollinger Bands Settings -->
+                        <div id="bbSettings" class="indicator-settings">
+                            <div class="form-group">
+                                <label>Period</label>
+                                <input type="number" id="bbPeriod" value="20" min="1" max="200">
+                            </div>
+                            <div class="form-group">
+                                <label>Standard Deviation</label>
+                                <input type="number" id="bbStdDev" value="2" min="0.1" max="5" step="0.1">
+                            </div>
+                            <div class="form-group">
+                                <label>Line Color</label>
+                                <input type="color" id="bbColor" value="#4caf50">
+                            </div>
+                            <div class="form-group">
+                                <label>Fill Opacity</label>
+                                <input type="range" id="bbOpacity" min="0" max="1" step="0.1" value="0.1">
+                            </div>
+                        </div>
+
+                        <!-- MACD Settings -->
+                        <div id="macdSettings" class="indicator-settings">
+                            <div class="form-group">
+                                <label>Fast Period</label>
+                                <input type="number" id="macdFastPeriod" value="12" min="1" max="50">
+                            </div>
+                            <div class="form-group">
+                                <label>Slow Period</label>
+                                <input type="number" id="macdSlowPeriod" value="26" min="1" max="100">
+                            </div>
+                            <div class="form-group">
+                                <label>Signal Period</label>
+                                <input type="number" id="macdSignalPeriod" value="9" min="1" max="50">
+                            </div>
+                            <div class="form-group">
+                                <label>MACD Line Color</label>
+                                <input type="color" id="macdLineColor" value="#2196f3">
+                            </div>
+                            <div class="form-group">
+                                <label>Signal Line Color</label>
+                                <input type="color" id="macdSignalColor" value="#ff9800">
+                            </div>
+                            <div class="form-group">
+                                <label>Histogram Color Up</label>
+                                <input type="color" id="macdHistColorUp" value="#4caf50">
+                            </div>
+                            <div class="form-group">
+                                <label>Histogram Color Down</label>
+                                <input type="color" id="macdHistColorDown" value="#f44336">
+                            </div>
+                        </div>
+
+                        <!-- Stochastic Settings -->
+                        <div id="stochSettings" class="indicator-settings">
+                            <div class="form-group">
+                                <label>K Period</label>
+                                <input type="number" id="stochKPeriod" value="14" min="1" max="50">
+                            </div>
+                            <div class="form-group">
+                                <label>D Period</label>
+                                <input type="number" id="stochDPeriod" value="3" min="1" max="50">
+                            </div>
+                            <div class="form-group">
+                                <label>Smoothing</label>
+                                <input type="number" id="stochSmoothing" value="3" min="1" max="50">
+                            </div>
+                            <div class="form-group">
+                                <label>K Line Color</label>
+                                <input type="color" id="stochKColor" value="#2196f3">
+                            </div>
+                            <div class="form-group">
+                                <label>D Line Color</label>
+                                <input type="color" id="stochDColor" value="#ff9800">
+                            </div>
+                        </div>
+
+                        <!-- Volume Settings -->
+                        <div id="volumeSettings" class="indicator-settings">
+                            <div class="form-group">
+                                <label>Up Color</label>
+                                <input type="color" id="volumeUpColor" value="#26a69a">
+                            </div>
+                            <div class="form-group">
+                                <label>Down Color</label>
+                                <input type="color" id="volumeDownColor" value="#ef5350">
+                            </div>
+                            <div class="form-group">
+                                <label>Opacity</label>
+                                <input type="range" id="volumeOpacity" min="0" max="1" step="0.1" value="1">
+                            </div>
+                        </div>
+
+                        <!-- AVWAP Settings -->
+                        <div id="avwapSettings" class="indicator-settings">
+                            <div class="form-group">
+                                <label>Line Color</label>
+                                <input type="color" id="avwapColor" value="#9c27b0">
+                            </div>
+                            <div class="form-group">
+                                <label>Line Width</label>
+                                <input type="number" id="avwapWidth" value="1" min="1" max="5">
+                            </div>
+                            <div class="form-group">
+                                <label>Anchor Date</label>
+                                <input type="datetime-local" id="avwapAnchorDate">
+                            </div>
+                            <div class="form-group">
+                                <label>Standard Deviation Bands</label>
+                                <input type="checkbox" id="avwapShowBands">
+                            </div>
+                            <div class="form-group">
+                                <label>Band Opacity</label>
+                                <input type="range" id="avwapBandOpacity" min="0" max="1" step="0.1" value="0.1">
+                            </div>
+                        </div>
+
+                        <!-- Add Pivot Points Settings -->
+                        <div id="pivotsSettings" class="indicator-settings">
+                            <div class="form-group">
+                                <label>Pivot Type</label>
+                                <select id="pivotType">
+                                    <option value="standard">Standard</option>
+                                    <option value="fibonacci">Fibonacci</option>
+                                    <option value="woodie">Woodie's</option>
+                                    <option value="camarilla">Camarilla</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Time Frame</label>
+                                <select id="pivotTimeFrame">
+                                    <option value="D">Daily</option>
+                                    <option value="W">Weekly</option>
+                                    <option value="M">Monthly</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Colors:</label>
+                                <div class="color-settings">
+                                    <div>
+                                        <label>Pivot Line (P):</label>
+                                        <input type="color" id="pivotColor" value="#ffd700">
+                                    </div>
+                                    <div>
+                                        <label>Support Lines:</label>
+                                        <input type="color" id="supportColor" value="#4caf50">
+                                    </div>
+                                    <div>
+                                        <label>Resistance Lines:</label>
+                                        <input type="color" id="resistanceColor" value="#f44336">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Line Width</label>
+                                <input type="number" id="pivotWidth" min="1" max="5" value="1">
+                            </div>
+                            <div class="form-group">
+                                <label>Show Labels</label>
+                                <input type="checkbox" id="showPivotLabels" checked>
+                            </div>
+                        </div>
+
+                        <!-- Super Trend Settings -->
+                        <div id="superTrendSettings" class="indicator-settings">
+                            <div class="form-group">
+                                <label>Period</label>
+                                <input type="number" id="superTrendPeriod" value="10" min="1" max="50">
+                            </div>
+                            <div class="form-group">
+                                <label>Multiplier</label>
+                                <input type="number" id="superTrendMultiplier" value="3" min="0.1" max="10" step="0.1">
+                            </div>
+                            <div class="form-group">
+                                <label>Uptrend Color</label>
+                                <input type="color" id="superTrendUpColor" value="#4caf50">
+                            </div>
+                            <div class="form-group">
+                                <label>Downtrend Color</label>
+                                <input type="color" id="superTrendDownColor" value="#f44336">
+                            </div>
+                            <div class="form-group">
+                                <label>Line Width</label>
+                                <input type="number" id="superTrendWidth" value="2" min="1" max="5">
+                            </div>
+                        </div>
+
+                        <!-- VWAP Settings -->
+                        <div id="vwapSettings" class="indicator-settings">
+                            <div class="form-group">
+                                <label>Line Color</label>
+                                <input type="color" id="vwapColor" value="#e91e63">
+                            </div>
+                            <div class="form-group">
+                                <label>Line Width</label>
+                                <input type="number" id="vwapWidth" value="2" min="1" max="5">
+                            </div>
+                            <div class="form-group">
+                                <label>Show Bands</label>
+                                <input type="checkbox" id="vwapShowBands">
+                            </div>
+                            <div class="form-group">
+                                <label>Standard Deviation Multiplier</label>
+                                <input type="number" id="vwapStdDev" value="2" min="0.1" max="5" step="0.1">
+                            </div>
+                            <div class="form-group">
+                                <label>Band Opacity</label>
+                                <input type="range" id="vwapBandOpacity" min="0" max="1" step="0.1" value="0.1">
+                            </div>
+                            <div class="form-group">
+                                <label>Reset Period</label>
+                                <select id="vwapResetPeriod">
+                                    <option value="D">Daily</option>
+                                    <option value="W">Weekly</option>
+                                    <option value="M">Monthly</option>
+                                    <option value="N">Never</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="apply-settings">Apply</button>
+                        <button class="reset-settings">Reset to Default</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="chart.js"></script>
+</body>
+</html> 

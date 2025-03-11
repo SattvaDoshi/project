@@ -15,26 +15,31 @@ export interface IndicatorSettings {
     enabled: boolean;
     period: number;
     color: string;
+    lineWidth: number;
   };
   ema: {
     enabled: boolean;
     period: number;
     color: string;
+    lineWidth: number;
   };
   wma: {
     enabled: boolean;
     period: number;
     color: string;
+    lineWidth: number;
   };
   bb: {
     enabled: boolean;
     period: number;
     stdDev: number;
     color: string;
+    lineWidth: number;
   };
   vwap: {
     enabled: boolean;
     color: string;
+    lineWidth: number;
   };
   volume: {
     enabled: boolean;
