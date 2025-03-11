@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon, Activity, LineChart, TrendingUp, BarChart2, Waves } from 'lucide-react';
+import { Sun, Moon, Activity, BarChart2 } from 'lucide-react';
 import { TIMEFRAMES } from '../utils/constants';
 import { IndicatorSettings } from '../types/chart';
 
@@ -9,7 +9,7 @@ interface TopNavProps {
   selectedTimeframe: string;
   onTimeframeChange: (timeframe: string) => void;
   settings: IndicatorSettings;
-  onSettingChange: (setting: string, value: boolean) => void;
+  onSettingChange: (setting: keyof IndicatorSettings, value: boolean) => void;
   onIndicatorClick: () => void;
 }
 

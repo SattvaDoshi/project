@@ -5,7 +5,7 @@ import { IndicatorSettings } from '../types/chart';
 
 interface TimeframeIndicatorMenuProps {
   settings: IndicatorSettings;
-  onSettingChange: (setting: string, value: boolean) => void;
+  onSettingChange: (setting: keyof IndicatorSettings, value: boolean) => void;
   selectedTimeframe: string;
   onTimeframeChange: (timeframe: string) => void;
 }
@@ -104,6 +104,9 @@ export const TimeframeIndicatorMenu: React.FC<TimeframeIndicatorMenuProps> = ({
             className={`flex items-center px-3 py-1.5 rounded text-sm ${
               settings.volume.enabled ? 'bg-[#2962ff] text-white' : 'text-[#787b86] hover:bg-[#2a2e39] hover:text-[#d1d4dc]'
             }`}
+            style={{ 
+              borderLeft: `3px solid ${settings.volume.enabled ? settings.volume.upColor : '#787b86'}`
+            }}
           >
             <BarChart2 size={16} className="mr-2" />
             VOL

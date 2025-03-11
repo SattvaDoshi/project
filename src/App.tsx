@@ -157,11 +157,11 @@ function App() {
     // Handle strategy change
   };
 
-  const handleSettingChange = (setting: string, value: boolean) => {
+  const handleSettingChange = (setting: keyof IndicatorSettings, value: boolean) => {
     setSettings(prev => ({
       ...prev,
       [setting]: {
-        ...prev[setting as keyof IndicatorSettings],
+        ...prev[setting],
         enabled: value
       }
     }));
@@ -247,7 +247,7 @@ function App() {
                               <input
                                 type="checkbox"
                                 checked={value.enabled}
-                                onChange={(e) => handleSettingChange(key, e.target.checked)}
+                                onChange={(e) => handleSettingChange(key as keyof IndicatorSettings, e.target.checked)}
                                 className="form-checkbox text-[#2962ff] rounded border-[#363c4e]"
                               />
                               <span className="text-[#d1d4dc]">{key.toUpperCase()}</span>

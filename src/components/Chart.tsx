@@ -69,17 +69,12 @@ export const Chart: React.FC<ChartProps> = ({
       name: 'Candlestick',
       type: 'candlestick',
       data: data.values,
-      itemStyle: {
-        color0: '#ef5350',
-        color: '#26a69a',
-        borderColor0: '#ef5350',
-        borderColor: '#26a69a'
-      }
+      itemStyle: data.itemStyle
     });
     legendData.push('Candlestick');
 
     // Add volume bars if enabled
-    if (settings.volume) {
+    if (settings.volume.enabled) {
       const volumeSeries: SeriesOption = {
         name: 'Volume',
         type: 'bar',
@@ -88,7 +83,9 @@ export const Chart: React.FC<ChartProps> = ({
         data: data.volumes.map((volume, i) => ({
           value: volume,
           itemStyle: {
-            color: data.values[i][1] > data.values[i][0] ? '#ef5350' : '#26a69a'
+            color: data.values[i][1] >= data.values[i][0] 
+              ? settings.volume.upColor 
+              : settings.volume.downColor
           }
         }))
       };
@@ -96,60 +93,103 @@ export const Chart: React.FC<ChartProps> = ({
       legendData.push('Volume');
     }
 
-    // Add MA indicators if enabled
-    if (settings.ma) {
-      const maData = calculateMA(data.values);
-      const maColors = ['#7b1fa2', '#1e88e5', '#43a047', '#fb8c00'];
-      const maPeriods = [5, 10, 20, 30];
+    // Add SMA if enabled
+    if (settings.sma.enabled) {
+      const smaData = calculateMA(data.values, settings.sma.period);
+      const smaSeries: SeriesOption = {
+        name: `SMA(${settings.sma.period})`,
+        type: 'line',
+        data: smaData,
+        smooth: true,
+        lineStyle: {
+          opacity: 0.8,
+          color: settings.sma.color
+        }
+      };
+      series.push(smaSeries);
+      legendData.push(`SMA(${settings.sma.period})`);
+    }
 
-      maPeriods.forEach((period, index) => {
-        const name = `MA${period}`;
-        const maSeries: SeriesOption = {
-          name,
-          type: 'line',
-          data: maData[index],
-          smooth: true,
-          lineStyle: {
-            opacity: 0.5,
-            color: maColors[index]
-          }
-        };
-        series.push(maSeries);
-        legendData.push(name);
-      });
+    // Add EMA if enabled
+    if (settings.ema.enabled) {
+      const emaData = calculateMA(data.values, settings.ema.period, 'ema');
+      const emaSeries: SeriesOption = {
+        name: `EMA(${settings.ema.period})`,
+        type: 'line',
+        data: emaData,
+        smooth: true,
+        lineStyle: {
+          opacity: 0.8,
+          color: settings.ema.color
+        }
+      };
+      series.push(emaSeries);
+      legendData.push(`EMA(${settings.ema.period})`);
+    }
+
+    // Add WMA if enabled
+    if (settings.wma.enabled) {
+      const wmaData = calculateMA(data.values, settings.wma.period, 'wma');
+      const wmaSeries: SeriesOption = {
+        name: `WMA(${settings.wma.period})`,
+        type: 'line',
+        data: wmaData,
+        smooth: true,
+        lineStyle: {
+          opacity: 0.8,
+          color: settings.wma.color
+        }
+      };
+      series.push(wmaSeries);
+      legendData.push(`WMA(${settings.wma.period})`);
     }
 
     // Add Bollinger Bands if enabled
-    if (settings.bb) {
-      const bbData = calculateBollingerBands(data.values);
+    if (settings.bb.enabled) {
+      const bbData = calculateBollingerBands(data.values, settings.bb.period, settings.bb.stdDev);
       const bbSeries: SeriesOption[] = [
         {
-          name: 'BB Upper',
+          name: `BB(${settings.bb.period}, ${settings.bb.stdDev}) Upper`,
           type: 'line',
           data: bbData.upper,
           smooth: true,
           lineStyle: {
-            opacity: 0.5,
-            color: '#ff9800'
+            opacity: 0.6,
+            color: settings.bb.color
           }
         },
         {
-          name: 'BB Lower',
+          name: `BB(${settings.bb.period}, ${settings.bb.stdDev}) Middle`,
+          type: 'line',
+          data: bbData.middle,
+          smooth: true,
+          lineStyle: {
+            opacity: 0.6,
+            color: settings.bb.color,
+            type: 'dashed'
+          }
+        },
+        {
+          name: `BB(${settings.bb.period}, ${settings.bb.stdDev}) Lower`,
           type: 'line',
           data: bbData.lower,
           smooth: true,
           lineStyle: {
-            opacity: 0.5,
-            color: '#ff9800'
+            opacity: 0.6,
+            color: settings.bb.color
           }
         }
       ];
       series.push(...bbSeries);
-      legendData.push('BB Upper', 'BB Lower');
+      legendData.push(
+        `BB(${settings.bb.period}, ${settings.bb.stdDev}) Upper`,
+        `BB(${settings.bb.period}, ${settings.bb.stdDev}) Middle`,
+        `BB(${settings.bb.period}, ${settings.bb.stdDev}) Lower`
+      );
     }
 
     // Add VWAP if enabled
-    if (settings.vwap) {
+    if (settings.vwap.enabled) {
       const vwapData = calculateVWAP(data.values, data.volumes);
       const vwapSeries: SeriesOption = {
         name: 'VWAP',
@@ -157,8 +197,8 @@ export const Chart: React.FC<ChartProps> = ({
         data: vwapData,
         smooth: true,
         lineStyle: {
-          opacity: 0.5,
-          color: '#e91e63'
+          opacity: 0.8,
+          color: settings.vwap.color
         }
       };
       series.push(vwapSeries);
